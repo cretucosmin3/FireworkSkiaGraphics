@@ -2,33 +2,29 @@ using System;
 using Silk.NET.OpenGL;
 using SkiaSharp;
 
-public class Texture
+namespace Performance;
+
+public class SkiaGlTexture
 {
     private GL _gl;
     private uint _texture;
     private int _width;
     private int _height;
-    private bool _preserveCanvas;
-    private SKBitmap _bitmap;
     private SKCanvas _canvas;
 
-    public Texture(GL gl, int width, int height, bool preserveCanvas = false)
+    public SkiaGlTexture(GL gl, int width, int height)
     {
         _gl = gl;
         _width = width;
         _height = height;
-        _preserveCanvas = preserveCanvas;
-
-        if (preserveCanvas) CreateCanvasAndBitmap();
 
         CreateTexture();
+        // Bind();
     }
 
     public void CreateCanvasAndBitmap()
     {
         var info = new SKImageInfo(_width, _height, SKColorType.Rgba8888);
-        _bitmap = new SKBitmap(info);
-        _canvas = new SKCanvas(_bitmap);
     }
 
     private void CreateTexture()
@@ -40,29 +36,29 @@ public class Texture
     public unsafe void Draw(Action<SKCanvas> drawAction)
     {
         Bind();
+
         _gl.ActiveTexture(TextureUnit.Texture0);
 
-        if (_preserveCanvas)
-        {
-            drawAction(_canvas);
-            fixed (byte* ptr = _bitmap.Bytes)
-            {
-                _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)_width, (uint)_height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
-            }
-        }
-        else
-        {
-            var info = new SKImageInfo(_width, _height, SKColorType.Rgba8888);
-            
-            using var bitmap = new SKBitmap(info);
-            using var canvas = new SKCanvas(bitmap);
-            
-            drawAction(canvas);
+        var info = new SKImageInfo(_width, _height, SKColorType.Rgba8888);
+        
+        using var bitmap = new SKBitmap(info);
+        using var canvas = new SKCanvas(bitmap);
+        
+        drawAction(canvas);
 
-            fixed (byte* ptr = bitmap.Bytes)
-            {
-                _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)_width, (uint)_height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
-            }
+        fixed (byte* ptr = bitmap.Bytes)
+        {
+            _gl.TexImage2D(
+                TextureTarget.Texture2D,
+                0,
+                InternalFormat.Rgba,
+                (uint)_width,
+                (uint)_height,
+                0,
+                PixelFormat.Rgba,
+                PixelType.UnsignedByte,
+                ptr
+            );
         }
 
         Unbind();

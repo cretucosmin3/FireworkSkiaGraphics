@@ -7,7 +7,7 @@ public static class PaintsLibrary
         Color = SKColors.Black,
         TextSize = 22,
         IsAntialias = true,
-        Typeface = SKTypeface.FromFamilyName("FreeMono",
+        Typeface = SKTypeface.FromFamilyName("DejaVu Sans",
             new SKFontStyle(300, 2, SKFontStyleSlant.Upright)
         )
     };
@@ -17,7 +17,7 @@ public static class PaintsLibrary
         Color = SKColors.White,
         TextSize = 22,
         IsAntialias = true,
-        Typeface = SKTypeface.FromFamilyName("FreeMono",
+        Typeface = SKTypeface.FromFamilyName("DejaVu Sans",
             new SKFontStyle(300, 2, SKFontStyleSlant.Upright)
         )
     };
