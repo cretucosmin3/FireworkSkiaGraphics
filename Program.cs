@@ -42,8 +42,7 @@ public class Program
     {
         WindowOptions options = WindowOptions.Default;
         options.Size = new Vector2D<int>(WindowWidth, WindowHeight);
-        options.Title = "Textures";
-        // options.FramesPerSecond = 120;
+        options.Title = "Fireworks";
         options.VSync = true;
         options.WindowState = WindowState.Normal;
         options.TransparentFramebuffer = false;
@@ -79,7 +78,20 @@ public class Program
     private static void SpawnSmallRipple(float x, float y)
     {
         float magnitude = 0.1f + (float)(0.5d * Random.Shared.NextDouble());
-        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude));
+        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude) {
+            BabyChance = 0.8f,
+        });
+    }
+
+    private static void SpawnSmallRippleX1(float x, float y)
+    {
+        float magnitude = 0.1f + (float)(0.5d * Random.Shared.NextDouble());
+        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude) {
+            BabyChance = 0.02f,
+            Duration = 300,
+            Distance = 250,
+            Size = 12
+        });
     }
 
     private static void SetInput()
@@ -120,6 +132,24 @@ public class Program
             mouse.MouseMove += (mouse, position) =>
             {
                 MousePos = position;
+
+                if (MouseDown)
+                {
+                    float magnitude = 0.4f + (float)(1.1d * Random.Shared.NextDouble());
+                    var newRipple = new Ripple(new Vector2(MousePos.X, MousePos.Y), magnitude)
+                    {
+                        IsSpecial = true,
+                        ReverseRatio = 0.8f,
+                        Duration = 150 + (200 * (float)Random.Shared.NextDouble()),
+                        Distance = 100 + (100 * (float)Random.Shared.NextDouble()),
+                        Size = 15,
+                        BabyChance = 0.05f
+                    };
+
+                    newRipple.SideEffect += SpawnSmallRippleX1;
+
+                    Ripples.Add(newRipple);
+                }
             };
         }
     }
@@ -245,6 +275,7 @@ public class Program
 
     private static unsafe void OnRender(double frameDelta)
     {
+        TimeMeasure.Track();
         PerformanceTracker.Track();
 
         _gl.Clear(ClearBufferMask.ColorBufferBit);
@@ -252,7 +283,7 @@ public class Program
         _gl.BindVertexArray(_vao);
         _gl.UseProgram(_program);
 
-        if(TexturePool.Length > 0) 
+        if(TexturePool.Length > 0 && (Ripples.Any() || SmallRipples.Any())) 
         {
             TexturePool[0].Draw((canvas) =>
             {
@@ -308,67 +339,71 @@ public class Program
             });
         }
 
-        Texture1.Draw((canvas) =>
+        if (Ripples.Any() || SmallRipples.Any())
         {
-            canvas.Clear();
-
-            if (Ripples.Any())
+            Texture1.Draw((canvas) =>
             {
-                List<int> ToRemove = new List<int>();
+                canvas.Clear();
 
-                for (int i = 0; i < Ripples.Count; i++)
+                if (Ripples.Any())
                 {
-                    var ripple = Ripples[i];
+                    List<int> ToRemove = new List<int>();
 
-                    if (ripple.IsFinished)
+                    for (int i = 0; i < Ripples.Count; i++)
                     {
-                        ToRemove.Add(i);
-                        continue;
+                        var ripple = Ripples[i];
+
+                        if (ripple.IsFinished)
+                        {
+                            ToRemove.Add(i);
+                            continue;
+                        }
+
+                        ripple.Cycle();
+                        ripple.Draw(canvas);
                     }
 
-                    ripple.Cycle();
-                    ripple.Draw(canvas);
-                }
-
-                for (int i = ToRemove.Count - 1; i >= 0; i--)
-                {
-                    Ripples.RemoveAt(ToRemove[i]);
-                }
-            }
-
-            if (SmallRipples.Any())
-            {
-                List<int> ToRemove = new List<int>();
-
-                for (int i = 0; i < SmallRipples.Count; i++)
-                {
-                    var ripple = SmallRipples[i];
-
-                    if (ripple.IsFinished)
+                    for (int i = ToRemove.Count - 1; i >= 0; i--)
                     {
-                        ToRemove.Add(i);
-                        continue;
+                        Ripples.RemoveAt(ToRemove[i]);
+                    }
+                }
+
+                if (SmallRipples.Any())
+                {
+                    List<int> ToRemove = new List<int>();
+
+                    for (int i = 0; i < SmallRipples.Count; i++)
+                    {
+                        var ripple = SmallRipples[i];
+
+                        if (ripple.IsFinished)
+                        {
+                            ToRemove.Add(i);
+                            continue;
+                        }
+
+                        ripple.Draw(canvas);
                     }
 
-                    ripple.Draw(canvas);
+                    // Remove items in reverse order
+                    for (int i = ToRemove.Count - 1; i >= 0; i--)
+                    {
+                        SmallRipples.RemoveAt(ToRemove[i]);
+                    }
                 }
-
-                // Remove items in reverse order
-                for (int i = ToRemove.Count - 1; i >= 0; i--)
-                {
-                    SmallRipples.RemoveAt(ToRemove[i]);
-                }
-            }
-        });
+            });
+        }
 
         for (int i = 0; i < TexturePool.Length; i++)
         {
             TexturePool[i].Render();
         }
 
-        Texture1.Render();
+        // Texture1.Render();
 
         PerformanceTracker.UpdateDeltaTime((float)frameDelta);
+        TimeMeasure.Print("Render");
     }
 
     private static void OnResize(Vector2D<int> size)

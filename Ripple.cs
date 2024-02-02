@@ -10,9 +10,11 @@ public class Ripple
     private Vector2 Position;
     private Stopwatch clock;
 
-    private float Size = 30;
-    private float Distance = 300;
-    private float Duration = 800;
+    public float Size = 10;
+    public float Distance = 450;
+    public float Duration = 250;
+    public float BabyChance = 0.80f;
+    public float ReverseRatio = 1.2f;
 
     public SKPaint Paint;
 
@@ -47,10 +49,10 @@ public class Ripple
     {
         if (!IsSpecial) return;
 
-        if (Random.Shared.NextDouble() < 0.15)
+        if (Random.Shared.NextDouble() < BabyChance)
         {
             float blobRadius = Distance * TimeRatio;
-            blobRadius += blobRadius * 0.3f * (float)Random.Shared.NextDouble();
+            blobRadius += blobRadius * 0.2f * (float)Random.Shared.NextDouble();
 
             GetRandomPointOnRadius(blobRadius, Position.X, Position.Y, out float x, out float y);
             SideEffect?.Invoke(x, y);
@@ -59,13 +61,15 @@ public class Ripple
 
     public void Draw(SKCanvas canvas)
     {
-        float blobRadius = Distance * TimeRatio;
+        float dx = Distance * ReverseRatio;
+        float blobRadius = (Distance - (dx * TimeRatio)) * TimeRatio;
         float blobSize = Size - (Size * TimeRatio);
         float blobHalfSize = blobSize / 2f;
+        float fuzzIncrease = 0.45f * (blobRadius / Distance);
 
-        for (int i = 0; i < (40 * Magnitude); i++)
+        for (int i = 0; i < (30 * Magnitude); i++)
         {
-            float radiusFuzz = (float)(blobRadius * 0.15f * Random.Shared.NextDouble());
+            float radiusFuzz = (float)(blobRadius * fuzzIncrease * Random.Shared.NextDouble());
             GetRandomPointOnRadius(blobRadius + radiusFuzz, Position.X, Position.Y, out float x, out float y);
 
             canvas.DrawRect(x - blobHalfSize, y - blobHalfSize, blobSize, blobSize, Paint);
