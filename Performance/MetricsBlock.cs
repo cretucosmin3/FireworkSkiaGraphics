@@ -109,7 +109,7 @@ public class MetricBlock
             float barHeight = NormalizedGraphValues[i];
             float xAdvance = X + (GraphBarWidth * i);
 
-            canvas.DrawRoundRect(xAdvance, GraphBarBottom - barHeight, GraphBarWidth, barHeight, 6, 6, Paint);
+            canvas.DrawRoundRect(xAdvance, GraphBarBottom - barHeight, GraphBarWidth, barHeight, 6, 0, Paint);
         }
     }
 

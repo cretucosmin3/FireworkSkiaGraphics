@@ -25,10 +25,10 @@ public class Program
 
     private static Texture Texture1;
 
-    private static readonly Texture[] TexturePool = new Texture[1];
+    private static readonly Texture[] TexturePool = new Texture[10];
 
-    private static readonly int WindowWidth = 1000;
-    private static readonly int WindowHeight = 800;
+    private static readonly int WindowWidth = (int)(1080 / 1.5f);
+    private static readonly int WindowHeight = 1920 / 2;
 
     private static Vector2 MousePos = new(0, 0);
     private static bool MouseDown = false;
@@ -78,7 +78,8 @@ public class Program
     private static void SpawnSmallRipple(float x, float y)
     {
         float magnitude = 0.1f + (float)(0.5d * Random.Shared.NextDouble());
-        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude) {
+        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude)
+        {
             BabyChance = 0.8f,
         });
     }
@@ -86,7 +87,8 @@ public class Program
     private static void SpawnSmallRippleX1(float x, float y)
     {
         float magnitude = 0.1f + (float)(0.5d * Random.Shared.NextDouble());
-        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude) {
+        SmallRipples.Add(new Ripple(new Vector2(x, y), magnitude)
+        {
             BabyChance = 0.02f,
             Duration = 300,
             Distance = 250,
@@ -101,6 +103,8 @@ public class Program
         PerformanceTracker.ShowFPS();
         PerformanceTracker.ShowCPU();
         PerformanceTracker.ShowGPU();
+
+        PerformanceTracker.AddChartBlock("Ripples", "Ripples", SKColors.AliceBlue);
 
         IInputContext _Input = _window.CreateInput();
 
@@ -190,9 +194,9 @@ public class Program
         // The quad indices data.
         uint[] indices =
         {
-                0u, 1u, 3u,
-                1u, 2u, 3u
-            };
+            0u, 1u, 3u,
+            1u, 2u, 3u
+        };
 
         // Create the EBO.
         _ebo = _gl.GenBuffer();
@@ -225,41 +229,29 @@ public class Program
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, 0);
 
-        Texture1 = new Texture(_gl, WindowWidth, WindowHeight, false);
+        Texture1 = new Texture(_gl, WindowWidth, WindowHeight, true);
 
-        for (int i = 0; i < TexturePool.Length; i++)
-        {
-            TexturePool[i] = new Texture(_gl, WindowWidth, WindowHeight, true);
+        Texture1.Draw(e => e.Clear());
 
-            TexturePool[i].Draw((canvas) =>
-            {
-                var layerPaint = new SKPaint
-                {
-                    Color = new SKColor(
-                        (byte)Random.Shared.Next(0, 255),
-                        (byte)Random.Shared.Next(0, 255),
-                        (byte)Random.Shared.Next(0, 255),
-                        10
-                    )
-                };
+        // for (int i = 0; i < TexturePool.Length; i++)
+        // {
+        //     TexturePool[i] = new Texture(_gl, WindowWidth, WindowHeight, true);
 
-                for (int X = 0; X < 500; X++)
-                {
-                    TimeMeasure.Track();
-                    int randomX = Random.Shared.Next(0, WindowWidth - 50);
-                    int randomY = Random.Shared.Next(31, WindowHeight - 50);
+        //     TexturePool[i].Draw((canvas) =>
+        //     {
+        //         for (int X = 0; X < 200; X++)
+        //         {
+        //             int randomX = Random.Shared.Next(-20, WindowWidth - 10);
+        //             int randomY = Random.Shared.Next(-20, WindowHeight - 10);
 
-                    canvas.DrawRect(randomX, randomY, 50, 50, layerPaint);
-
-                    canvas.DrawText(
-                        i.ToString(),
-                        new SKPoint(randomX + 18 - (i > 9 ? 7 : 0), randomY + 32),
-                        PaintsLibrary.SimpleWhiteText
-                    );
-                    TimeMeasure.Mark();
-                }
-            });
-        }
+        //             canvas.DrawText(
+        //                 $"{100 * Random.Shared.NextDouble():0}",
+        //                 new SKPoint(randomX + 18 - (i > 9 ? 7 : 0), randomY + 32),
+        //                 Random.Shared.NextDouble() > 0.5d ? PaintsLibrary.SimpleBlackText : PaintsLibrary.SimpleWhiteText
+        //             );
+        //         }
+        //     });
+        // }
 
         TimeMeasure.Print($"Each cube on texture render textures");
 
@@ -273,9 +265,10 @@ public class Program
 
     private static void OnUpdate(double dt) { }
 
+    
+
     private static unsafe void OnRender(double frameDelta)
     {
-        TimeMeasure.Track();
         PerformanceTracker.Track();
 
         _gl.Clear(ClearBufferMask.ColorBufferBit);
@@ -283,61 +276,38 @@ public class Program
         _gl.BindVertexArray(_vao);
         _gl.UseProgram(_program);
 
-        if(TexturePool.Length > 0 && (Ripples.Any() || SmallRipples.Any())) 
+        // The quad vertices data.
+        float[] vertices =
         {
-            TexturePool[0].Draw((canvas) =>
-            {
-                canvas.Clear();
+          // aPosition  --------   aTexCoords
+             1f, -1f, 0.0f,      1.0f, 1.0f,
+             1f, 1f, 0.0f,      1.0f, 0.0f,
+            -1f, 1f, 0.0f,      0.0f, 0.0f,
+            -1f, -1f, 0.0f,      0.0f, 1.0f
+        };
 
-                if (Ripples.Any())
-                {
-                    List<int> ToRemove = new List<int>();
+        // Upload the vertices data to the VBO.
+        fixed (float* buf = vertices)
+            _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), buf, BufferUsageARB.StaticDraw);
 
-                    for (int i = 0; i < Ripples.Count; i++)
-                    {
-                        var ripple = Ripples[i];
 
-                        if (ripple.IsFinished)
-                        {
-                            ToRemove.Add(i);
-                            continue;
-                        }
+        // for (int i = 0; i < 1; i++)
+        // {
+        //     TexturePool[i].Draw((canvas) =>
+        //     {
+        //         for (int X = 0; X < 200; X++)
+        //         {
+        //             int randomX = Random.Shared.Next(-20, WindowWidth - 10);
+        //             int randomY = Random.Shared.Next(-20, WindowHeight - 10);
 
-                        ripple.Cycle();
-                        ripple.Draw(canvas);
-                    }
-
-                    for (int i = ToRemove.Count - 1; i >= 0; i--)
-                    {
-                        Ripples.RemoveAt(ToRemove[i]);
-                    }
-                }
-
-                if (SmallRipples.Any())
-                {
-                    List<int> ToRemove = new List<int>();
-
-                    for (int i = 0; i < SmallRipples.Count; i++)
-                    {
-                        var ripple = SmallRipples[i];
-
-                        if (ripple.IsFinished)
-                        {
-                            ToRemove.Add(i);
-                            continue;
-                        }
-
-                        ripple.Draw(canvas);
-                    }
-
-                    // Remove items in reverse order
-                    for (int i = ToRemove.Count - 1; i >= 0; i--)
-                    {
-                        SmallRipples.RemoveAt(ToRemove[i]);
-                    }
-                }
-            });
-        }
+        //             canvas.DrawText(
+        //                 $"{100 * Random.Shared.NextDouble():0}",
+        //                 new SKPoint(randomX + 18 - (i > 9 ? 7 : 0), randomY + 32),
+        //                 Random.Shared.NextDouble() > 0.25d ? PaintsLibrary.SimpleBlackText : PaintsLibrary.SimpleWhiteText
+        //             );
+        //         }
+        //     });
+        // }
 
         if (Ripples.Any() || SmallRipples.Any())
         {
@@ -395,15 +365,15 @@ public class Program
             });
         }
 
-        for (int i = 0; i < TexturePool.Length; i++)
-        {
-            TexturePool[i].Render();
-        }
+        // for (int i = 0; i < TexturePool.Length; i++)
+        // {
+        //     TexturePool[i].Render();
+        // }
 
-        // Texture1.Render();
+        Texture1.Render();
 
+        PerformanceTracker.UpdateValue("Ripples", Ripples.Count + SmallRipples.Count);
         PerformanceTracker.UpdateDeltaTime((float)frameDelta);
-        TimeMeasure.Print("Render");
     }
 
     private static void OnResize(Vector2D<int> size)

@@ -121,9 +121,22 @@ public class PerformanceMetrics
 
     }
 
-    public void UpdateValue(string metricKey, float value)
+    public void AddChartBlock(string key, string label, SKColor color)
     {
+        var newBlock = new MetricBlock(label, 10, NextYBlockPosition, 330, 35)
+        {
+            BarColor = color,
+            AveragingTicks = 15
+        };
 
+        MetricBlocks.Add(key, newBlock);
+
+        NextYBlockPosition += newBlock.FullBlockHeight + BlocksGap;
+    }
+
+    public void UpdateValue(string key, float value)
+    {
+        MetricBlocks[key].UpdateValue(value);
     }
 
     public void Close()
