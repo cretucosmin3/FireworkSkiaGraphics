@@ -4,10 +4,9 @@ using Silk.NET.Maths;
 using Silk.NET.Windowing;
 using Silk.NET.OpenGL;
 using SkiaSharp;
-using Silk.NET.Input;
 using System.Threading;
 
-namespace Performance;
+namespace SilkyMetrics.Base;
 
 public class MetricsWindow
 {
@@ -22,15 +21,28 @@ public class MetricsWindow
 
     private Texture MainTexture;
 
-    private readonly int WindowWidth = 350;
-    private readonly int WindowHeight = 500;
+    private int WindowWidth = 350;
+    private int WindowHeight = 500;
 
+    private static SKPaint SimplePaint = new()
+    {
+        Color = SKColors.Purple
+    };
 
     public Action<SKCanvas> Render;
     public Action TriggerClose;
 
-    public void Init()
+    private bool MustRender = true;
+    public void TriggerRender() => MustRender = true;
+
+    private bool RenderLoopActive = false;
+    public bool IsActive { get => _window.IsClosing == false && RenderLoopActive; }
+
+    public void Init(int width, int height)
     {
+        WindowWidth = width;
+        WindowHeight = height;
+
         WindowOptions options = WindowOptions.Default;
 
         options.Size = new Vector2D<int>(WindowWidth, WindowHeight);
@@ -38,6 +50,7 @@ public class MetricsWindow
         options.WindowState = WindowState.Normal;
         options.WindowBorder = WindowBorder.Fixed;
         options.IsEventDriven = true;
+        options.FramesPerSecond = 1;
 
         options.API = new GraphicsAPI(
            ContextAPI.OpenGL,
@@ -45,8 +58,6 @@ public class MetricsWindow
            ContextFlags.ForwardCompatible,
            new APIVersion(3, 2)
         );
-
-        Window.PrioritizeSdl();
 
         _window = Window.Create(options);
 
@@ -59,58 +70,36 @@ public class MetricsWindow
         _window.Render += OnRender;
 
         _window.Run();
-
         _window.Dispose();
+    }
+
+    public void Close()
+    {
+        _window.Close();
     }
 
     void StartWindow()
     {
+        RenderLoopActive = true;
+
         while (!_window.IsClosing)
         {
-            // Not needed but for later use
-            _window.DoEvents();
-            _window.ContinueEvents();
             _window.DoRender();
 
-            Thread.Sleep(30);
+            Thread.Sleep(100);
         }
 
-        _window.Dispose();
-    }
+        RenderLoopActive = false;
 
-    private void SetInput()
-    {
-        // Might be useful to add different views
-        // controlled by F1, F2 ...
-        // but right now, too early.
-
-        // IInputContext _Input = _window.CreateInput();
-
-        // foreach (var mouse in _Input.Mice)
-        // {
-        //     mouse.MouseDown += (mouse, button) =>
-        //     {
-
-        //     };
-
-        //     mouse.MouseUp += (mouse, button) =>
-        //     {
-
-        //     };
-
-        //     mouse.MouseMove += (mouse, position) =>
-        //     {
-
-        //     };
-        // }
+        MainTexture.Dispose();
+        // _window.Dispose();
+        // _gl.Dispose();
     }
 
     private unsafe void OnLoad()
     {
         _window.WindowState = WindowState.Normal;
         _window.Center();
-
-        SetInput();
 
         _gl = _window.CreateOpenGL();
 
@@ -120,13 +109,13 @@ public class MetricsWindow
         _gl.BindVertexArray(_vao);
 
         float[] vertices =
-        {
-              // aPosition          aTexCoords
-                 1f, -1f, 0.0f,     1.0f, 1.0f,
-                 1f,  1f, 0.0f,     1.0f, 0.0f,
-                -1f,  1f, 0.0f,     0.0f, 0.0f,
-                -1f, -1f, 0.0f,     0.0f, 1.0f
-            };
+        [
+            // aPosition        aTexCoords
+             1f, -1f, 0.0f,     1.0f, 1.0f,
+             1f,  1f, 0.0f,     1.0f, 0.0f,
+            -1f,  1f, 0.0f,     0.0f, 0.0f,
+            -1f, -1f, 0.0f,     0.0f, 1.0f
+        ];
 
         _vbo = _gl.GenBuffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
@@ -135,10 +124,10 @@ public class MetricsWindow
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), buf, BufferUsageARB.StaticDraw);
 
         uint[] indices =
-        {
-                0u, 1u, 3u,
-                1u, 2u, 3u
-            };
+        [
+            0u, 1u, 3u,
+            1u, 2u, 3u
+        ];
 
         _ebo = _gl.GenBuffer();
         _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _ebo);
@@ -146,7 +135,7 @@ public class MetricsWindow
         fixed (uint* buf = indices)
             _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(indices.Length * sizeof(uint)), buf, BufferUsageARB.StaticDraw);
 
-        Shader normalShader = new Shader(_gl, ShaderData.Fragment, ShaderData.Vertex);
+        Shader normalShader = new(_gl, ShaderData.Fragment, ShaderData.Vertex);
 
         _program = _gl.CreateProgram();
 
@@ -177,12 +166,7 @@ public class MetricsWindow
         StartWindow();
     }
 
-    public static SKPaint SimplePaint = new SKPaint
-    {
-        Color = SKColors.Purple
-    };
-
-    private unsafe void OnRender(double frameDelta)
+    private unsafe void OnRender(double _)
     {
         _gl.Clear(ClearBufferMask.ColorBufferBit);
 

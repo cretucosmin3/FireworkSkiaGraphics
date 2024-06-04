@@ -1,16 +1,12 @@
-using System;
 using System.Linq;
 
-namespace Performance;
+namespace SilkyMetrics.Base;
 
-public static class Maths
+internal static class Maths
 {
     public static float[] Normalize(float[] values, float min, float max)
     {
-        if (!values.Any())
-        {
-            return Array.Empty<float>();
-        }
+        if (values.Length == 0) return [];
 
         float currentMin = values.Min();
         float currentMax = values.Max();

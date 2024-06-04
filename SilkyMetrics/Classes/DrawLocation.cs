@@ -1,0 +1,9 @@
+namespace SilkyMetrics.Classes;
+
+internal class DrawLocation
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+}

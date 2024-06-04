@@ -2,29 +2,35 @@ using System;
 using Silk.NET.OpenGL;
 using SkiaSharp;
 
-namespace Performance;
+namespace SilkyMetrics.Base;
 
-public class SkiaGlTexture
+public class Texture : IDisposable
 {
     private GL _gl;
     private uint _texture;
     private int _width;
     private int _height;
+    private bool _preserveCanvas;
+    private SKBitmap _bitmap;
     private SKCanvas _canvas;
 
-    public SkiaGlTexture(GL gl, int width, int height)
+    public Texture(GL gl, int width, int height, bool preserveCanvas = false)
     {
         _gl = gl;
         _width = width;
         _height = height;
+        _preserveCanvas = preserveCanvas;
+
+        if (preserveCanvas) CreateCanvasAndBitmap();
 
         CreateTexture();
-        // Bind();
     }
 
     public void CreateCanvasAndBitmap()
     {
         var info = new SKImageInfo(_width, _height, SKColorType.Rgba8888);
+        _bitmap = new SKBitmap(info);
+        _canvas = new SKCanvas(_bitmap);
     }
 
     private void CreateTexture()
@@ -36,29 +42,29 @@ public class SkiaGlTexture
     public unsafe void Draw(Action<SKCanvas> drawAction)
     {
         Bind();
-
         _gl.ActiveTexture(TextureUnit.Texture0);
 
-        var info = new SKImageInfo(_width, _height, SKColorType.Rgba8888);
-        
-        using var bitmap = new SKBitmap(info);
-        using var canvas = new SKCanvas(bitmap);
-        
-        drawAction(canvas);
-
-        fixed (byte* ptr = bitmap.Bytes)
+        if (_preserveCanvas)
         {
-            _gl.TexImage2D(
-                TextureTarget.Texture2D,
-                0,
-                InternalFormat.Rgba,
-                (uint)_width,
-                (uint)_height,
-                0,
-                PixelFormat.Rgba,
-                PixelType.UnsignedByte,
-                ptr
-            );
+            drawAction(_canvas);
+            fixed (byte* ptr = _bitmap.Bytes)
+            {
+                _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)_width, (uint)_height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+            }
+        }
+        else
+        {
+            var info = new SKImageInfo(_width, _height, SKColorType.Rgba8888);
+            
+            using var bitmap = new SKBitmap(info);
+            using var canvas = new SKCanvas(bitmap);
+            
+            drawAction(canvas);
+
+            fixed (byte* ptr = bitmap.Bytes)
+            {
+                _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)_width, (uint)_height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+            }
         }
 
         Unbind();
@@ -93,5 +99,11 @@ public class SkiaGlTexture
     {
         Bind();
         _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+    }
+
+    public void Dispose()
+    {
+        _canvas.Dispose();
+        _bitmap.Dispose();
     }
 }

@@ -98,4 +98,9 @@ public class Texture
         Bind();
         _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
     }
+
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
 }

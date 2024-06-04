@@ -4,13 +4,14 @@ using Silk.NET.Maths;
 using Silk.NET.Windowing;
 using Silk.NET.OpenGL;
 using SkiaSharp;
-using System.Diagnostics;
 using Silk.NET.Input;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
-using Performance;
-using System.Threading;
+using SilkyMetrics.Base;
+using SilkyMetrics.Classes;
+
+namespace RenderTest;
 
 public class Program
 {
@@ -27,16 +28,14 @@ public class Program
 
     private static readonly Texture[] TexturePool = new Texture[10];
 
-    private static readonly int WindowWidth = (int)(1080 / 1.5f);
-    private static readonly int WindowHeight = 1920 / 2;
+    private static readonly int WindowWidth = 700;
+    private static readonly int WindowHeight = 700;
 
     private static Vector2 MousePos = new(0, 0);
     private static bool MouseDown = false;
 
     private static readonly List<Ripple> Ripples = new();
     private static readonly List<Ripple> SmallRipples = new();
-
-    static PerformanceMetrics PerformanceTracker;
 
     public static void Main()
     {
@@ -67,8 +66,41 @@ public class Program
         _window.FramebufferResize += OnResize;
         _window.Closing += () =>
         {
-            PerformanceTracker.Close();
+            GraphMetrics.Close();
         };
+
+        GraphMetrics.Initialize(new()
+        {
+            FPS = new()
+            {
+                Precise = false,
+                ValueTimeWindow = 1f
+            },
+            CPU = new()
+            {
+                Precise = true,
+                ValueTimeWindow = 0.5f,
+                UnitLabel = "ms"
+            },
+            GPU = new()
+            {
+                Precise = true,
+                ValueTimeWindow = 0.3f,
+                UnitLabel = "ms"
+            },
+            CustomMetrics = [
+                new MetricOptions() {
+                    Label = "Ripples",
+                    Precise = false,
+                    Height = 100,
+                    ValueTimeWindow = 0.2f,
+                    MaxValues = 40,
+                    ChartType = ChartType.Bars,
+                    BackColor = SKColors.Black,
+                    ChartColor = SKColors.YellowGreen
+                }
+            ]
+        });
 
         _window.Run();
 
@@ -98,14 +130,6 @@ public class Program
 
     private static void SetInput()
     {
-        PerformanceTracker = new PerformanceMetrics();
-
-        PerformanceTracker.ShowFPS();
-        PerformanceTracker.ShowCPU();
-        PerformanceTracker.ShowGPU();
-
-        PerformanceTracker.AddChartBlock("Ripples", "Ripples", SKColors.AliceBlue);
-
         IInputContext _Input = _window.CreateInput();
 
         foreach (var mouse in _Input.Mice)
@@ -233,43 +257,22 @@ public class Program
 
         Texture1.Draw(e => e.Clear());
 
-        // for (int i = 0; i < TexturePool.Length; i++)
-        // {
-        //     TexturePool[i] = new Texture(_gl, WindowWidth, WindowHeight, true);
-
-        //     TexturePool[i].Draw((canvas) =>
-        //     {
-        //         for (int X = 0; X < 200; X++)
-        //         {
-        //             int randomX = Random.Shared.Next(-20, WindowWidth - 10);
-        //             int randomY = Random.Shared.Next(-20, WindowHeight - 10);
-
-        //             canvas.DrawText(
-        //                 $"{100 * Random.Shared.NextDouble():0}",
-        //                 new SKPoint(randomX + 18 - (i > 9 ? 7 : 0), randomY + 32),
-        //                 Random.Shared.NextDouble() > 0.5d ? PaintsLibrary.SimpleBlackText : PaintsLibrary.SimpleWhiteText
-        //             );
-        //         }
-        //     });
-        // }
-
         TimeMeasure.Print($"Each cube on texture render textures");
-
 
         int location = _gl.GetUniformLocation(_program, "uTexture");
         _gl.Uniform1(location, 0);
 
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+        GraphMetrics.ShowWindow();
     }
 
     private static void OnUpdate(double dt) { }
 
-    
-
     private static unsafe void OnRender(double frameDelta)
     {
-        PerformanceTracker.Track();
+        GraphMetrics.Begin();
 
         _gl.Clear(ClearBufferMask.ColorBufferBit);
 
@@ -278,46 +281,27 @@ public class Program
 
         // The quad vertices data.
         float[] vertices =
-        {
+        [
           // aPosition  --------   aTexCoords
              1f, -1f, 0.0f,      1.0f, 1.0f,
              1f, 1f, 0.0f,      1.0f, 0.0f,
             -1f, 1f, 0.0f,      0.0f, 0.0f,
             -1f, -1f, 0.0f,      0.0f, 1.0f
-        };
+        ];
 
         // Upload the vertices data to the VBO.
         fixed (float* buf = vertices)
             _gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(vertices.Length * sizeof(float)), buf, BufferUsageARB.StaticDraw);
 
-
-        // for (int i = 0; i < 1; i++)
-        // {
-        //     TexturePool[i].Draw((canvas) =>
-        //     {
-        //         for (int X = 0; X < 200; X++)
-        //         {
-        //             int randomX = Random.Shared.Next(-20, WindowWidth - 10);
-        //             int randomY = Random.Shared.Next(-20, WindowHeight - 10);
-
-        //             canvas.DrawText(
-        //                 $"{100 * Random.Shared.NextDouble():0}",
-        //                 new SKPoint(randomX + 18 - (i > 9 ? 7 : 0), randomY + 32),
-        //                 Random.Shared.NextDouble() > 0.25d ? PaintsLibrary.SimpleBlackText : PaintsLibrary.SimpleWhiteText
-        //             );
-        //         }
-        //     });
-        // }
-
-        if (Ripples.Any() || SmallRipples.Any())
+        if (Ripples.Count != 0 || SmallRipples.Count != 0)
         {
             Texture1.Draw((canvas) =>
             {
                 canvas.Clear();
 
-                if (Ripples.Any())
+                if (Ripples.Count != 0)
                 {
-                    List<int> ToRemove = new List<int>();
+                    List<int> ToRemove = new();
 
                     for (int i = 0; i < Ripples.Count; i++)
                     {
@@ -339,9 +323,9 @@ public class Program
                     }
                 }
 
-                if (SmallRipples.Any())
+                if (SmallRipples.Count != 0)
                 {
-                    List<int> ToRemove = new List<int>();
+                    List<int> ToRemove = new();
 
                     for (int i = 0; i < SmallRipples.Count; i++)
                     {
@@ -372,8 +356,8 @@ public class Program
 
         Texture1.Render();
 
-        PerformanceTracker.UpdateValue("Ripples", Ripples.Count + SmallRipples.Count);
-        PerformanceTracker.UpdateDeltaTime((float)frameDelta);
+        GraphMetrics.UpdateMetric("Ripples", Ripples.Count + SmallRipples.Count);
+        GraphMetrics.End((float)frameDelta);
     }
 
     private static void OnResize(Vector2D<int> size)
