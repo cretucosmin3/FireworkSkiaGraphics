@@ -24,6 +24,7 @@ internal class BarChart : ChartBase
     {
         IsAntialias = true,
         Style = SKPaintStyle.Fill,
+        PathEffect = SKPathEffect.CreateCorner(3f),
         StrokeWidth = 1
     };
 
@@ -35,7 +36,7 @@ internal class BarChart : ChartBase
 
     internal override void AddNewValue(float newValue)
     {
-        if(SkipFirstValue && (DateTime.Now - LastValueTime).TotalSeconds > 2)
+        if (SkipFirstValue && (DateTime.Now - LastValueTime).TotalSeconds > 2)
         {
             SkipFirstValue = false;
             return;
@@ -44,6 +45,7 @@ internal class BarChart : ChartBase
         if (Options.PlotsEachValue)
         {
             AddValueToGraph(newValue);
+            LastValue = newValue;
             return;
         }
 
@@ -52,6 +54,8 @@ internal class BarChart : ChartBase
         if ((DateTime.Now - LastValueTime).TotalSeconds >= Options.ValueTimeWindow)
         {
             float avgValue = TempValues.Count > 0 ? TempValues.Average() : 0;
+            LastValue = avgValue;
+
             TempValues.Clear();
 
             AddValueToGraph(avgValue);
@@ -77,7 +81,7 @@ internal class BarChart : ChartBase
             GraphValues.RemoveAt(0);
         }
 
-        
+
         GraphValues.Add(value);
     }
 

@@ -42,7 +42,7 @@ public class Program
         WindowOptions options = WindowOptions.Default;
         options.Size = new Vector2D<int>(WindowWidth, WindowHeight);
         options.Title = "Fireworks";
-        options.VSync = true;
+        options.VSync = false;
         options.WindowState = WindowState.Normal;
         options.TransparentFramebuffer = false;
         options.WindowBorder = WindowBorder.Resizable;
@@ -74,30 +74,34 @@ public class Program
             FPS = new()
             {
                 Precise = false,
-                ValueTimeWindow = 1f
+                ValueTimeWindow = 0.1f,
+                ChartType = ChartType.Line,
+                MaxValues = 40
             },
             CPU = new()
             {
                 Precise = true,
-                ValueTimeWindow = 0.5f,
+                ValueTimeWindow = 0.1f,
+                ChartType = ChartType.Line,
                 UnitLabel = "ms"
             },
             GPU = new()
             {
                 Precise = true,
                 ValueTimeWindow = 0.3f,
+                MaxValues = 30,
                 UnitLabel = "ms"
             },
             CustomMetrics = [
                 new MetricOptions() {
                     Label = "Ripples",
                     Precise = false,
-                    Height = 100,
-                    ValueTimeWindow = 0.2f,
-                    MaxValues = 40,
-                    ChartType = ChartType.Bars,
-                    BackColor = SKColors.Black,
-                    ChartColor = SKColors.YellowGreen
+                    Height = 75,
+                    ValueTimeWindow = 0.05f,
+                    MaxValues = 50,
+                    ChartType = ChartType.Line,
+                    BackColor = new(20, 20, 20),
+                    ChartColor = SKColors.YellowGreen,
                 }
             ]
         });
@@ -348,11 +352,6 @@ public class Program
                 }
             });
         }
-
-        // for (int i = 0; i < TexturePool.Length; i++)
-        // {
-        //     TexturePool[i].Render();
-        // }
 
         Texture1.Render();
 

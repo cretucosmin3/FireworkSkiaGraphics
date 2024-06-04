@@ -49,8 +49,8 @@ public class MetricsWindow
         options.Title = "Metrics";
         options.WindowState = WindowState.Normal;
         options.WindowBorder = WindowBorder.Fixed;
-        options.IsEventDriven = true;
-        options.FramesPerSecond = 1;
+        options.IsEventDriven = false;
+        options.FramesPerSecond = 5;
 
         options.API = new GraphicsAPI(
            ContextAPI.OpenGL,
@@ -84,6 +84,8 @@ public class MetricsWindow
 
         while (!_window.IsClosing)
         {
+            _window.ContinueEvents();
+            _window.DoEvents();
             _window.DoRender();
 
             Thread.Sleep(100);
@@ -163,7 +165,7 @@ public class MetricsWindow
         _gl.Enable(EnableCap.Blend);
         _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
-        StartWindow();
+        // StartWindow();
     }
 
     private unsafe void OnRender(double _)

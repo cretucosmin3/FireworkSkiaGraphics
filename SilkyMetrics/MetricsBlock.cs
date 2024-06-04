@@ -9,11 +9,10 @@ namespace SilkyMetrics.Base;
 internal class MetricBlock
 {
     // Constants
-    private const float TextPadding = 5;
+    private const float TextPadding = 8;
 
     // Computed
     private float TextHeight = 0;
-    private float LastKnownValue = 0;
 
     // Functional
     private readonly ChartBase visualChart;
@@ -57,7 +56,6 @@ internal class MetricBlock
     public void UpdateValue(float newValue)
     {
         visualChart.AddNewValue(newValue);
-        LastKnownValue = newValue;
     }
 
     public void Draw(SKCanvas canvas)
@@ -80,9 +78,9 @@ internal class MetricBlock
         StrB.Append(": ");
 
         if (Options.Precise)
-            StrB.Append(LastKnownValue.ToString("0.00"));
+            StrB.Append(visualChart.LastValue.ToString("0.00"));
         else
-            StrB.Append((int)LastKnownValue);
+            StrB.Append((int)visualChart.LastValue);
 
         if (!string.IsNullOrEmpty(Options.UnitLabel))
         {

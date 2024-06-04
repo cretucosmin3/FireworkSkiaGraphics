@@ -23,8 +23,9 @@ internal class LineChart : ChartBase
     private SKPaint Paint = new()
     {
         IsAntialias = true,
-        Style = SKPaintStyle.Fill,
-        StrokeWidth = 2
+        Style = SKPaintStyle.Stroke,
+        PathEffect = SKPathEffect.CreateCorner(3f),
+        StrokeWidth = 2.5f,
     };
 
     internal override void Initialize(MetricOptions options, DrawLocation drawLocation)
@@ -44,6 +45,7 @@ internal class LineChart : ChartBase
         if (Options.PlotsEachValue)
         {
             AddValueToGraph(newValue);
+            LastValue = newValue;
             return;
         }
 
@@ -52,6 +54,8 @@ internal class LineChart : ChartBase
         if ((DateTime.Now - LastValueTime).TotalSeconds >= Options.ValueTimeWindow)
         {
             float avgValue = TempValues.Count > 0 ? TempValues.Average() : 0;
+            LastValue = avgValue;
+
             TempValues.Clear();
 
             AddValueToGraph(avgValue);
@@ -97,11 +101,13 @@ internal class LineChart : ChartBase
     internal override void Draw(SKCanvas canvas)
     {
         Paint.Color = Options.BackColor;
+        Paint.Style = SKPaintStyle.Fill;
+
         canvas.DrawRect(DrawLocation.X, DrawLocation.Y, DrawLocation.Width, DrawLocation.Height, Paint);
 
-        float[] NormalizedGraphValues = Maths.Normalize(GraphValues.ToArray(), 0, DrawLocation.Height);
+        float[] NormalizedGraphValues = Maths.Normalize(GraphValues.ToArray(), 2, DrawLocation.Height - 2);
 
-        float GraphLineWidth = DrawLocation.Width / Options.MaxValues;
+        float GraphLineWidth = DrawLocation.Width / (Options.MaxValues - 1);
         float GraphBottom = DrawLocation.Y + DrawLocation.Height;
 
         Paint.Color = Options.ChartColor;
@@ -123,6 +129,7 @@ internal class LineChart : ChartBase
             }
         }
 
+        Paint.Style = SKPaintStyle.Stroke;
         canvas.DrawPath(path, Paint);
     }
 }

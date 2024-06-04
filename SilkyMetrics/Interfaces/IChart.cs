@@ -5,8 +5,8 @@ namespace SilkyMetrics.Interfaces;
 
 public abstract class ChartBase
 {
-    internal float LatestValue = 0f;
+    public float LastValue { get; set; } = 0f;
     internal abstract void Initialize(MetricOptions options, DrawLocation drawLocation);
-    abstract internal void Draw(SKCanvas canvas);
-    abstract internal void AddNewValue(float newValue);
+    internal abstract void Draw(SKCanvas canvas);
+    internal abstract void AddNewValue(float newValue);
 }
