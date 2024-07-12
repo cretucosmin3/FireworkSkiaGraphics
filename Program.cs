@@ -3,13 +3,12 @@ using System.Drawing;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 using Silk.NET.OpenGL;
-using SkiaSharp;
 using Silk.NET.Input;
 using System.Numerics;
 using System.Collections.Generic;
-using System.Linq;
-using SilkyMetrics.Base;
+using SilkyMetrics;
 using SilkyMetrics.Classes;
+using SkiaSharp;
 
 namespace RenderTest;
 
@@ -28,8 +27,8 @@ public class Program
 
     private static readonly Texture[] TexturePool = new Texture[10];
 
-    private static readonly int WindowWidth = 700;
-    private static readonly int WindowHeight = 700;
+    private static readonly int WindowWidth = 950;
+    private static readonly int WindowHeight = 950;
 
     private static Vector2 MousePos = new(0, 0);
     private static bool MouseDown = false;
@@ -42,7 +41,7 @@ public class Program
         WindowOptions options = WindowOptions.Default;
         options.Size = new Vector2D<int>(WindowWidth, WindowHeight);
         options.Title = "Fireworks";
-        options.VSync = false;
+        options.VSync = true;
         options.WindowState = WindowState.Normal;
         options.TransparentFramebuffer = false;
         options.WindowBorder = WindowBorder.Resizable;
@@ -71,40 +70,70 @@ public class Program
 
         GraphMetrics.Initialize(new()
         {
+            BackgroundColor = new(80, 80, 85),
             FPS = new()
             {
                 Precise = false,
                 ValueTimeWindow = 0.1f,
                 ChartType = ChartType.Line,
-                MaxValues = 40
+                MaxValues = 40,
+                TextColor = SKColors.White,
+                ChartColor = SKColors.BlueViolet,
+                BackColor = new(25, 25, 25)
             },
             CPU = new()
             {
-                Precise = true,
                 ValueTimeWindow = 0.1f,
-                ChartType = ChartType.Line,
-                UnitLabel = "ms"
+                ChartType = ChartType.Hills,
+                TextColor = SKColors.White,
+                ChartColor = SKColors.Aquamarine,
+                BackColor = new(25, 25, 25)
             },
             GPU = new()
             {
-                Precise = true,
                 ValueTimeWindow = 0.3f,
                 MaxValues = 30,
-                UnitLabel = "ms"
+                TextColor = SKColors.White,
+                ChartColor = SKColors.IndianRed,
+                BackColor = new(25, 25, 25)
+            },
+            MEM = new()
+            {
+                ValueTimeWindow = 0.3f,
+                MaxValues = 60,
+                Height = 80,
+                ChartType = ChartType.Bars,
+                TextColor = SKColors.White,
+                ChartColor = SKColors.Cornsilk,
+                BackColor = new(25, 25, 25)
             },
             CustomMetrics = [
-                new MetricOptions() {
+                new() {
                     Label = "Ripples",
                     Precise = false,
                     Height = 75,
                     ValueTimeWindow = 0.05f,
                     MaxValues = 50,
                     ChartType = ChartType.Line,
-                    BackColor = new(20, 20, 20),
-                    ChartColor = SKColors.YellowGreen,
+                    TextColor = SKColors.White,
+                    ChartColor = SKColors.AliceBlue,
+                    BackColor = new(25, 25, 25)
                 }
             ]
         });
+
+        // GraphMetrics.Initialize(new()
+        // {
+        //     FPS = new(),
+        //     CPU = new(),
+        //     GPU = new(),
+        //     MEM = new(),
+        //     CustomMetrics = [
+        //         new() {
+        //             Label = "Ripples",
+        //         }
+        //     ]
+        // });
 
         _window.Run();
 

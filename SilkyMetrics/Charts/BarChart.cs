@@ -20,18 +20,26 @@ internal class BarChart : ChartBase
 
     private bool SkipFirstValue = true;
 
-    private SKPaint Paint = new()
+    private SKPaint BackPaint = new()
     {
         IsAntialias = true,
         Style = SKPaintStyle.Fill,
         PathEffect = SKPathEffect.CreateCorner(3f),
-        StrokeWidth = 1
+    };
+
+    private SKPaint Paint = new()
+    {
+        IsAntialias = false,
+        Style = SKPaintStyle.Fill,
     };
 
     internal override void Initialize(MetricOptions options, DrawLocation drawLocation)
     {
         Options = options;
         DrawLocation = drawLocation;
+
+        BackPaint.Color = options.BackColor;
+        Paint.Color = options.ChartColor;
     }
 
     internal override void AddNewValue(float newValue)
@@ -101,22 +109,19 @@ internal class BarChart : ChartBase
 
     internal override void Draw(SKCanvas canvas)
     {
-        Paint.Color = Options.BackColor;
-        canvas.DrawRect(DrawLocation.X, DrawLocation.Y, DrawLocation.Width, DrawLocation.Height, Paint);
+        canvas.DrawRect(DrawLocation.X, DrawLocation.Y, DrawLocation.Width, DrawLocation.Height, BackPaint);
 
-        float[] NormalizedGraphValues = Maths.Normalize(GraphValues.ToArray(), 0, DrawLocation.Height);
+        float[] NormalizedGraphValues = Maths.Normalize(GraphValues.ToArray(), 2, DrawLocation.Height - 2);
 
         float GraphBarWidth = DrawLocation.Width / Options.MaxValues;
         float GraphBarBottom = DrawLocation.Y + DrawLocation.Height;
-
-        Paint.Color = Options.ChartColor;
 
         for (int i = 0; i < NormalizedGraphValues.Length; i++)
         {
             float barHeight = NormalizedGraphValues[i];
             float xAdvance = DrawLocation.X + (GraphBarWidth * i);
 
-            canvas.DrawRoundRect(xAdvance, GraphBarBottom - barHeight, GraphBarWidth, barHeight, 6, 0, Paint);
+            canvas.DrawRect(xAdvance, GraphBarBottom - barHeight, GraphBarWidth, barHeight, Paint);
         }
     }
 }

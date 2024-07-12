@@ -32,9 +32,6 @@ public class MetricsWindow
     public Action<SKCanvas> Render;
     public Action TriggerClose;
 
-    private bool MustRender = true;
-    public void TriggerRender() => MustRender = true;
-
     private bool RenderLoopActive = false;
     public bool IsActive { get => _window.IsClosing == false && RenderLoopActive; }
 

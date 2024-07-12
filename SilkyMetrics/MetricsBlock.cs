@@ -23,7 +23,7 @@ internal class MetricBlock
     private SKPaint TextPaint = new()
     {
         Color = SKColors.Black,
-        TextSize = 15,
+        TextSize = 16,
         IsAntialias = true,
         Typeface = SKTypeface.FromFamilyName(FontHelper.DefaultFontName,
             new SKFontStyle(500, 2, SKFontStyleSlant.Upright)
@@ -39,8 +39,8 @@ internal class MetricBlock
 
         if (options.ChartType == ChartType.Bars)
             visualChart = new BarChart();
-        else if (options.ChartType == ChartType.Line)
-            visualChart = new LineChart();
+        else
+            visualChart = new LineChart(options.ChartType == ChartType.Hills);
 
         visualChart.Initialize(options, new DrawLocation()
         {

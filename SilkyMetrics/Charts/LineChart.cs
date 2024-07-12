@@ -14,6 +14,7 @@ internal class LineChart : ChartBase
     private readonly List<float> TempValues = new();
     private DateTime LastValueTime = DateTime.Now;
     private int loopingValueIndex = 0;
+    private bool ClosedPath = false;
 
     private MetricOptions Options;
     private DrawLocation DrawLocation;
@@ -25,8 +26,14 @@ internal class LineChart : ChartBase
         IsAntialias = true,
         Style = SKPaintStyle.Stroke,
         PathEffect = SKPathEffect.CreateCorner(3f),
+        StrokeCap = SKStrokeCap.Square,
         StrokeWidth = 2.5f,
     };
+
+    internal LineChart(bool closedPath)
+    {
+        ClosedPath = closedPath;
+    }
 
     internal override void Initialize(MetricOptions options, DrawLocation drawLocation)
     {
@@ -36,11 +43,12 @@ internal class LineChart : ChartBase
 
     internal override void AddNewValue(float newValue)
     {
-        if (SkipFirstValue && (DateTime.Now - LastValueTime).TotalSeconds > 2)
+        if (SkipFirstValue && (DateTime.Now - LastValueTime).TotalSeconds < 1)
         {
-            SkipFirstValue = false;
             return;
         }
+
+        SkipFirstValue = false;
 
         if (Options.PlotsEachValue)
         {
@@ -105,7 +113,9 @@ internal class LineChart : ChartBase
 
         canvas.DrawRect(DrawLocation.X, DrawLocation.Y, DrawLocation.Width, DrawLocation.Height, Paint);
 
-        float[] NormalizedGraphValues = Maths.Normalize(GraphValues.ToArray(), 2, DrawLocation.Height - 2);
+        if (GraphValues.Count == 0) return;
+
+        float[] NormalizedGraphValues = Maths.Normalize(GraphValues.ToArray(), 2.5f, DrawLocation.Height - 2);
 
         float GraphLineWidth = DrawLocation.Width / (Options.MaxValues - 1);
         float GraphBottom = DrawLocation.Y + DrawLocation.Height;
@@ -114,22 +124,32 @@ internal class LineChart : ChartBase
 
         using var path = new SKPath();
 
-        for (int i = 0; i < NormalizedGraphValues.Length; i++)
+        if (ClosedPath)
+            path.MoveTo(DrawLocation.X, GraphBottom - 1);
+
+        int i;
+
+        for (i = 0; i < NormalizedGraphValues.Length; i++)
         {
             float x = DrawLocation.X + (GraphLineWidth * i);
             float y = GraphBottom - NormalizedGraphValues[i];
 
-            if (i == 0)
-            {
+            if (i == 0 && !ClosedPath)
                 path.MoveTo(x, y);
-            }
             else
-            {
                 path.LineTo(x, y);
-            }
         }
 
-        Paint.Style = SKPaintStyle.Stroke;
+        i--;
+
+        if (ClosedPath && NormalizedGraphValues.Length > 1)
+        {
+            path.LineTo((DrawLocation.X + (GraphLineWidth * i)), GraphBottom - 1);
+            // path.LineTo(DrawLocation.X + 1, GraphBottom - 1);
+            path.Close();
+        }
+
+        Paint.Style = ClosedPath ? SKPaintStyle.Fill : SKPaintStyle.Stroke;
         canvas.DrawPath(path, Paint);
     }
 }

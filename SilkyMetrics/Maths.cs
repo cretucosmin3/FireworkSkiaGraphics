@@ -11,6 +11,8 @@ internal static class Maths
         float currentMin = values.Min();
         float currentMax = values.Max();
 
+        if (currentMax == 0) currentMax = 1;
+
         return values.Select(value => NormalizeValue(value, currentMin, currentMax, min, max)).ToArray();
     }
 

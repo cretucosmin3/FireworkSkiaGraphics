@@ -31,13 +31,13 @@ public class MetricOptions
     /// For the built in metrics (FPS, CPU, GPU, MEM) this value is overridden.
     /// </summary>
     public bool PlotsEachValue = false;
-    public float ValueTimeWindow = 0.5f;
-    public int Height = 60;
-    public int MaxValues = 80;
+    public float ValueTimeWindow = 0.35f;
+    public int Height = 55;
+    public int MaxValues = 40;
 
     // Colors
     public SKColor TextColor = SKColors.Black;
-    public SKColor BackColor = SKColors.White;
+    public SKColor BackColor = new(200, 200, 210);
     public SKColor ChartColor = SKColors.Black;
     public ChartType ChartType = ChartType.Bars;
 }

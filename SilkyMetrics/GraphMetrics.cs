@@ -3,10 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using SilkyMetrics.Base;
 using SilkyMetrics.Classes;
 using SkiaSharp;
 
-namespace SilkyMetrics.Base;
+namespace SilkyMetrics;
 
 public sealed class GraphMetrics
 {
@@ -16,11 +17,13 @@ public sealed class GraphMetrics
 
     private readonly Stopwatch CPUTimer = new();
     private readonly Stopwatch GPUTimer = new();
+    private readonly Stopwatch MemoryUpdateTimer = Stopwatch.StartNew();
     private readonly Dictionary<string, MetricBlock> MetricBlocks = [];
 
     private MetricsWindow? Window = null;
     private Thread? MainThread;
     private bool WasInitialized = false;
+    private SKColor BackgroundColor;
 
     private bool FPS_Enabled = false;
     private bool CPU_Enabled = false;
@@ -50,8 +53,10 @@ public sealed class GraphMetrics
         NextYBlockPosition += options.Height + BlocksGap;
     }
 
-    private void DrawBlocks(SKCanvas canvas)
+    private void Draw(SKCanvas canvas)
     {
+        canvas.Clear(BackgroundColor);
+
         foreach (var block in MetricBlocks.Values)
         {
             block.Draw(canvas);
@@ -74,12 +79,12 @@ public sealed class GraphMetrics
 
         if (options.GPU != null)
         {
-            totalHeight += options.CPU.Height + BlocksGap;
+            totalHeight += options.GPU.Height + BlocksGap;
         }
 
         if (options.MEM != null)
         {
-            totalHeight += options.CPU.Height + BlocksGap;
+            totalHeight += options.MEM.Height + BlocksGap;
         }
 
         foreach (var customMetric in options.CustomMetrics)
@@ -93,10 +98,12 @@ public sealed class GraphMetrics
     public static void Initialize(InitializeOptions options)
     {
         Instance.WindowWidth = options.WindowWidth;
+        Instance.BackgroundColor = options.BackgroundColor;
 
         if (options.FPS != null)
         {
             options.FPS.Label = "FPS";
+            options.FPS.UnitLabel = null;
             Instance.AddChartBlock(options.FPS);
             Instance.FPS_Enabled = true;
         }
@@ -104,6 +111,7 @@ public sealed class GraphMetrics
         if (options.CPU != null)
         {
             options.CPU.Label = "CPU";
+            options.CPU.UnitLabel = "ms";
             Instance.AddChartBlock(options.CPU);
             Instance.CPU_Enabled = true;
         }
@@ -111,6 +119,7 @@ public sealed class GraphMetrics
         if (options.GPU != null)
         {
             options.GPU.Label = "GPU";
+            options.GPU.UnitLabel = "ms";
             Instance.AddChartBlock(options.GPU);
             Instance.GPU_Enabled = true;
         }
@@ -118,6 +127,8 @@ public sealed class GraphMetrics
         if (options.MEM != null)
         {
             options.MEM.Label = "MEM";
+            options.MEM.UnitLabel = "mb";
+            options.MEM.PlotsEachValue = true;
             Instance.AddChartBlock(options.MEM);
             Instance.MEM_Enabled = true;
         }
@@ -145,7 +156,7 @@ public sealed class GraphMetrics
             Instance.MainThread = new Thread(() =>
             {
                 Instance.Window = new MetricsWindow();
-                Instance.Window.Render += Instance.DrawBlocks;
+                Instance.Window.Render += Instance.Draw;
                 Instance.Window.Init(Instance.WindowWidth, Instance.WindowHeight);
             });
 
@@ -189,13 +200,24 @@ public sealed class GraphMetrics
         if (Instance.GPU_Enabled)
             Instance.MetricBlocks["GPU"].UpdateValue(gpuTime);
 
+        if (Instance.MEM_Enabled && Instance.MemoryUpdateTimer.ElapsedMilliseconds > 1000)
+        {
+            var process = Process.GetCurrentProcess();
+            long memoryUsageInBytes = process.WorkingSet64;
+            float memoryUsageInMB = memoryUsageInBytes / (1024.0f * 1024.0f);
+
+            Instance.MetricBlocks["MEM"].UpdateValue(memoryUsageInMB);
+            Instance.MemoryUpdateTimer.Restart();
+            process.Dispose();
+        }
+
         Instance.GPUTimer.Restart();
     }
 
-    public static void UpdateMetric(string key, float value)
+    public static void UpdateMetric(string metricLabel, float value)
     {
         if (Instance.WasInitialized)
-            Instance.MetricBlocks[key].UpdateValue(value);
+            Instance.MetricBlocks[metricLabel].UpdateValue(value);
     }
 
     public static void Close()
